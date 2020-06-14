@@ -1,6 +1,7 @@
 package com.example.example5;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -8,23 +9,25 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup.MarginLayoutParams;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 /**
  * Smart Phone Sensing Example 5. Object movement on canvas.
  */
-public class MainActivity extends Activity implements OnClickListener {
+public class MainActivity extends Activity implements OnClickListener, SensorEventListener {
 
     /**
      * The buttons.
@@ -42,6 +45,14 @@ public class MainActivity extends Activity implements OnClickListener {
      * The canvas.
      */
     private Canvas canvas;
+
+    private SensorManager mSensorManager;
+    private Sensor mSensorStepDetect;
+    private Sensor mSensorAccelerometer;
+    private Sensor mSensorMagnetometer;
+    private float[] mAccelerometerData = new float[3];
+    private float[] mMagnetometerData = new float[3];
+    private int mDirection;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,18 +84,24 @@ public class MainActivity extends Activity implements OnClickListener {
         // create a drawable object
         drawable = new ShapeDrawable(new OvalShape());
         drawable.getPaint().setColor(Color.BLUE);
-        drawable.setBounds(width/2-20, height/2-20, width/2+20, height/2+20);
+        drawable.setBounds(width / 2 - 20, height / 2 - 20, width / 2 + 20, height / 2 + 20);
 
         // create a canvas
         ImageView canvasView = (ImageView) findViewById(R.id.canvas);
-        Bitmap blankBitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
+        Bitmap blankBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         canvas = new Canvas(blankBitmap);
         canvasView.setImageBitmap(blankBitmap);
 
         // draw the object
         drawable.draw(canvas);
 
-
+        mSensorManager =
+                (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mSensorStepDetect = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+        mSensorAccelerometer = mSensorManager.getDefaultSensor(
+                Sensor.TYPE_ACCELEROMETER);
+        mSensorMagnetometer = mSensorManager.getDefaultSensor(
+                Sensor.TYPE_MAGNETIC_FIELD);
     }
 
     @Override
@@ -118,7 +135,7 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.button1: {
                 Toast.makeText(getApplication(), "UP", Toast.LENGTH_SHORT).show();
                 Rect r = drawable.getBounds();
-                drawable.setBounds(r.left,r.top-20,r.right,r.bottom-20);
+                drawable.setBounds(r.left, r.top - 20, r.right, r.bottom - 20);
                 textView.setText("\n\tMove Up" + "\n\tTop Margin = "
                         + drawable.getBounds().top);
                 break;
@@ -127,7 +144,7 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.button4: {
                 Toast.makeText(getApplication(), "DOWN", Toast.LENGTH_SHORT).show();
                 Rect r = drawable.getBounds();
-                drawable.setBounds(r.left,r.top+20,r.right,r.bottom+20);
+                drawable.setBounds(r.left, r.top + 20, r.right, r.bottom + 20);
                 textView.setText("\n\tMove Down" + "\n\tTop Margin = "
                         + drawable.getBounds().top);
                 break;
@@ -136,7 +153,7 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.button2: {
                 Toast.makeText(getApplication(), "LEFT", Toast.LENGTH_SHORT).show();
                 Rect r = drawable.getBounds();
-                drawable.setBounds(r.left-20,r.top,r.right-20,r.bottom);
+                drawable.setBounds(r.left - 20, r.top, r.right - 20, r.bottom);
                 textView.setText("\n\tMove Left" + "\n\tLeft Margin = "
                         + drawable.getBounds().left);
                 break;
@@ -145,7 +162,7 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.button3: {
                 Toast.makeText(getApplication(), "RIGHT", Toast.LENGTH_SHORT).show();
                 Rect r = drawable.getBounds();
-                drawable.setBounds(r.left+20,r.top,r.right+20,r.bottom);
+                drawable.setBounds(r.left + 20, r.top, r.right + 20, r.bottom);
                 textView.setText("\n\tMove Right" + "\n\tLeft Margin = "
                         + drawable.getBounds().left);
                 break;
@@ -155,5 +172,115 @@ public class MainActivity extends Activity implements OnClickListener {
         // redrawing of the object
         canvas.drawColor(Color.WHITE);
         drawable.draw(canvas);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        int sensorType = event.sensor.getType();
+
+        switch (sensorType) {
+            case Sensor.TYPE_ACCELEROMETER:
+                mAccelerometerData = event.values.clone();
+                break;
+            case Sensor.TYPE_MAGNETIC_FIELD:
+                mMagnetometerData = event.values.clone();
+                break;
+            default:
+                // do nothing
+                break;
+        }
+
+        if (sensorType == Sensor.TYPE_STEP_DETECTOR) {
+            switch (mDirection) {
+                // UP
+                case 0: {
+                    Toast.makeText(getApplication(), "UP", Toast.LENGTH_SHORT).show();
+                    Rect r = drawable.getBounds();
+                    drawable.setBounds(r.left, r.top - 20, r.right, r.bottom - 20);
+                    textView.setText("\n\tMove Up" + "\n\tTop Margin = "
+                            + drawable.getBounds().top);
+                    break;
+                }
+                // DOWN
+                case 1: {
+                    Toast.makeText(getApplication(), "DOWN", Toast.LENGTH_SHORT).show();
+                    Rect r = drawable.getBounds();
+                    drawable.setBounds(r.left, r.top + 20, r.right, r.bottom + 20);
+                    textView.setText("\n\tMove Down" + "\n\tTop Margin = "
+                            + drawable.getBounds().top);
+                    break;
+                }
+                // LEFT
+                case 2: {
+                    Toast.makeText(getApplication(), "LEFT", Toast.LENGTH_SHORT).show();
+                    Rect r = drawable.getBounds();
+                    drawable.setBounds(r.left - 20, r.top, r.right - 20, r.bottom);
+                    textView.setText("\n\tMove Left" + "\n\tLeft Margin = "
+                            + drawable.getBounds().left);
+                    break;
+                }
+                // RIGHT
+                case 3: {
+                    Toast.makeText(getApplication(), "RIGHT", Toast.LENGTH_SHORT).show();
+                    Rect r = drawable.getBounds();
+                    drawable.setBounds(r.left + 20, r.top, r.right + 20, r.bottom);
+                    textView.setText("\n\tMove Right" + "\n\tLeft Margin = "
+                            + drawable.getBounds().left);
+                    break;
+                }
+                default:
+                    break;
+            }
+            // redrawing of the object
+            canvas.drawColor(Color.WHITE);
+            drawable.draw(canvas);
+        } else {
+            float[] rotationMatrix = new float[9];
+            boolean rotationOK = SensorManager.getRotationMatrix(rotationMatrix,
+                    null, mAccelerometerData, mMagnetometerData);
+            float[] orientationValues = new float[3];
+            if (rotationOK) {
+                SensorManager.getOrientation(rotationMatrix, orientationValues);
+            }
+            float azimuth = orientationValues[0];
+            if (azimuth < (-Math.PI / 4 * 3)) {
+                mDirection = 1;  // down
+            } else if (azimuth < (-Math.PI / 4)) {
+                mDirection = 2;  // left
+            } else if (azimuth < (Math.PI / 4)) {
+                mDirection = 0;  // up
+            } else if (azimuth < (Math.PI / 4 * 3)) {
+                mDirection = 3;  // right
+            } else {
+                mDirection = 1;  // down
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (mSensorStepDetect != null) {
+            mSensorManager.registerListener(this, mSensorStepDetect,
+                    SensorManager.SENSOR_DELAY_FASTEST);
+        }
+        if (mSensorAccelerometer != null) {
+            mSensorManager.registerListener(this, mSensorAccelerometer,
+                    SensorManager.SENSOR_DELAY_NORMAL);
+        }
+        if (mSensorMagnetometer != null) {
+            mSensorManager.registerListener(this, mSensorMagnetometer,
+                    SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mSensorManager.unregisterListener(this);
     }
 }
